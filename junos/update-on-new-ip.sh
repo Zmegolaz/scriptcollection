@@ -19,6 +19,10 @@
 #    tunnels or NAT policies where you explicitly have to configure your
 #    own IP.
 ###
+#    Put this file somewhere (like /cf/var/db/scripts/lib/) and add it to
+#    crontab like this:
+#    */15 * * * * /sbin/sh /cf/var/db/scripts/lib/update-on-new-ip.sh > /var/tmp/updateoutput.log
+###
 
 # Config.
 
