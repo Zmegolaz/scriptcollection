@@ -26,27 +26,30 @@
 
 # Config.
 
+# Interface we want to monitor for new address.
 interface="vlan.300"
+
+# Command to get the old IP. Make sure it doesn't list multiple ones!
+oldipcommand="show configuration interfaces ip-0/0/0 unit 0 tunnel source"
 
 # Config done!
 
-oldip=`cat /var/tmp/lastip`
-newip=`/usr/sbin/cli show interface terse $interface | egrep -o "[0-9\.]{7,}"`
+oldip=`echo "$oldipcommand" | /usr/sbin/cli | egrep -o "[0-9\.]{7,}"`
+newip=`echo "show interface terse $interface" | /usr/sbin/cli | egrep -o "[0-9\.]{7,}"`
+
+# Something wrong with oldipcommand.
+if [ "" = $oldip ]; then
+        exit 1
+fi
+
+# If we don't have any ip, request one and exit. Our next run will take care of updating config.
+if [ "" = $newip ]; then
+        echo "request dhcp client renew interface $interface" | /usr/sbin/cli
+        exit 0
+fi
 
 # Exit if we haven't changed IP.
 if [ $oldip = $newip ]; then
-        exit 0
-fi
-
-# First run after boot.
-if ["" = $oldip ]; then
-        echo $newip > /var/tmp/lastip
-        exit 0
-fi
-
-# If we don't have any ip, request one and exit. Our next run will take care of updating config and files.
-if [ "" = $newip ]; then
-        echo "request dhcp client renew interface $interface" | /usr/sbin/cli
         exit 0
 fi
 
@@ -54,6 +57,4 @@ echo "configure private
 replace pattern $oldip with $newip
 commit comment \"replaced $oldip with $newip\" and-quit
 exit" | /usr/sbin/cli
-
-echo $newip > /var/tmp/lastip
 
