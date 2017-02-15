@@ -19,9 +19,9 @@
 #    tunnels or NAT policies where you explicitly have to configure your
 #    own IP.
 ###
-#    Put this file somewhere (like /cf/var/db/scripts/lib/) and add it to
+#    Put this file somewhere (like /cf/var/db/scripts/) and add it to
 #    crontab like this:
-#    */15 * * * * /sbin/sh /cf/var/db/scripts/lib/update-on-new-ip.sh > /var/tmp/updateoutput.log
+#    */15 * * * * /sbin/sh /cf/var/db/scripts/update-on-new-ip.sh
 ###
 
 # Config.
@@ -32,29 +32,46 @@ interface="vlan.300"
 # Command to get the old IP. Make sure it doesn't list multiple ones!
 oldipcommand="show configuration interfaces ip-0/0/0 unit 0 tunnel source"
 
+# DDNS info, leave it empty if you don't use it.
+# Server to send updates to, like "members.dyndns.org" or similar.
+ddnsserver="members.dyndns.org"
+# FQDN of the hostname to update.
+ddnshostname="hostname.example.com"
+# Username.
+ddnsuser="username"
+# Password or update key.
+ddnspass="secretpass"
+
 # Config done!
 
 oldip=`echo "$oldipcommand" | /usr/sbin/cli | egrep -o "[0-9\.]{7,}"`
 newip=`echo "show interface terse $interface" | /usr/sbin/cli | egrep -o "[0-9\.]{7,}"`
 
 # Something wrong with oldipcommand.
-if [ "" = $oldip ]; then
+if [ "" = "$oldip" ]; then
         exit 1
 fi
 
 # If we don't have any ip, request one and exit. Our next run will take care of updating config.
-if [ "" = $newip ]; then
+if [ "" = "$newip" ]; then
         echo "request dhcp client renew interface $interface" | /usr/sbin/cli
         exit 0
 fi
 
 # Exit if we haven't changed IP.
-if [ $oldip = $newip ]; then
+if [ "$oldip" = "$newip" ]; then
         exit 0
 fi
 
+# Do the actual config update.
 echo "configure private
 replace pattern $oldip with $newip
 commit comment \"replaced $oldip with $newip\" and-quit
 exit" | /usr/sbin/cli
+
+# Update DDNS if it's configured.
+if [ "" != "$ddnsserver" ] && [ "" != "$ddnshostname" ] && [ "" != "$ddnsuser" ] && [ "" != "$ddnspass" ]; then
+        fetch-secure -o /dev/null "https://$ddnsuser:$ddnspass@$ddnsserver/nic/update?hostname=$ddnshostname&myip=$newi
+p"
+fi
 
