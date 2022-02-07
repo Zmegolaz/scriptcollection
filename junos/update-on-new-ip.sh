@@ -71,7 +71,6 @@ exit" | /usr/sbin/cli
 
 # Update DDNS if it's configured.
 if [ "" != "$ddnsserver" ] && [ "" != "$ddnshostname" ] && [ "" != "$ddnsuser" ] && [ "" != "$ddnspass" ]; then
-        fetch-secure -o /dev/null "https://$ddnsuser:$ddnspass@$ddnsserver/nic/update?hostname=$ddnshostname&myip=$newi
-p"
+        fetch-secure -o /dev/null "https://$ddnsuser:$ddnspass@$ddnsserver/nic/update?hostname=$ddnshostname&myip=$newip"
 fi
 
